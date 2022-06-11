@@ -1,0 +1,62 @@
+version: '3.7'
+
+services:
+  frontend:
+    build: frontend
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_BACKEND_PORT=${BACKEND_PORT}
+      - REACT_APP_FRONTEND_PORT=${FRONTEND_PORT}
+      - REACT_APP_DEBUG=${DEBUG}
+      - REACT_APP_FRONTEND_API_URL=${FRONTEND_API_URL}
+    stdin_open: true
+    volumes:
+      - ./frontend/public:/app/public/
+      - ./frontend/src:/app/src/
+      - frontend_build:/app/build/
+  nginx:
+    build: nginx
+    environment:
+      - BACKEND_PORT=${BACKEND_PORT}
+      - BACKEND_NEURAL_PORT=${BACKEND_NEURAL_PORT}
+      - FRONTEND_PORT=${FRONTEND_PORT}
+      - DEBUG=${DEBUG}
+    ports:
+      - ${WEB_INTERFACE_PORT}:80
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:rw,cached
+      - frontend_build:/app/
+    depends_on:
+      - backend
+      - frontend
+    restart: always
+  backend:
+    environment:
+      - BACKEND_PORT=${BACKEND_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - HOST=${DOMAIN}
+      - DEBUG=${DEBUG}
+    build: backend
+    volumes:
+      - ./backend/:/app/
+    depends_on:
+      - db
+  db:
+    image: postgres:alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    restart: always
+    ports:
+      - 5432:5432
+
+volumes:
+  frontend_build:
+  postgres_data:
