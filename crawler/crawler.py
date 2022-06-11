@@ -4,6 +4,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import json
 import fire
+import requests
+from bs4 import BeautifulSoup
 from time import sleep
 from abc import abstractmethod
 
@@ -149,3 +151,28 @@ class RiaNovostiCrawler(PagesCrawler):
             hrefs_dict[sphere] = list(hrefs)
 
         return hrefs_list
+
+
+class PanoramaCrawler(PagesCrawler):
+    """
+    Panorama urls crawler.
+    """
+    def __init__(self, web_resource_name: str = "https://panorama.pub", output_name: str = "panorama_pages.json"):
+        super().__init__(web_resource_name, output_name)
+
+    def urls_crawling(self, urls=[]):
+        url_list = []
+
+        for i in range(1, 5):
+            url = "https://panorama.pub/news?page={}".format(i)
+            url_list.extend(self.page_process(url))
+        return url_list
+
+    def page_process(self, url):
+        page = requests.get(url)
+        soup = BeautifulSoup(page.text, 'html.parser')
+        urls = []
+
+        for a in soup.find_all("a", class_="flex flex-col rounded-md hover:text-secondary hover:bg-accent/[.1] mb-2"):
+            urls.append(self.web_resource + a.get("href"))
+        return urls

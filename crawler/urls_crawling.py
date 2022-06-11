@@ -1,12 +1,13 @@
 import fire
 
-from crawler import MosRuCrawler, RiaNovostiCrawler
+from crawler import MosRuCrawler, RiaNovostiCrawler, PanoramaCrawler
 
 
 def main():
     mos_ru_crawler = MosRuCrawler()
     ria_novosti_crawler = RiaNovostiCrawler()
-    crawlers = (mos_ru_crawler, ria_novosti_crawler)
+    panorama_crawler = PanoramaCrawler()
+    crawlers = [mos_ru_crawler, ria_novosti_crawler, panorama_crawler]
     for crawl in crawlers:
         crawl.setup()
         pages = crawl.urls_crawling()

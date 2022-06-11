@@ -6,7 +6,7 @@ from lxml import html
 import lxml
 
 from tqdm import tqdm
-
+import dateparser
 import time
 import re
 import os
@@ -152,6 +152,66 @@ class RiaRuParser(Parser):
                 tags_text = [tag.text for tag in tags]
                 info["tags"] = tags_text
 
+            return info
+
+        except:
+            return {}
+
+
+class PanoramaParser(Parser):
+    """
+    Panorama urls parser.
+    """
+    def __init__(self, output_name: str = "panorama_parsed.json"):
+        super().__init__(output_name)
+
+    def meta_process(self, page, soup):
+        TITLE_meta = "og:title"
+        tree = html.fromstring(page.content)
+        head = soup.find("head")
+        info = {}
+        if head:
+            meta = tree.xpath("//meta[@property]")
+            for i in meta:
+                if i.attrib["property"] == TITLE_meta:
+                    info["title"] = i.attrib["content"]
+        return info
+
+    def parse_page(self, url: str):
+        try:
+            page = requests.get(url)
+            soup = BeautifulSoup(page.text, 'html.parser')
+
+            info = {}
+            info["url"] = url
+
+            meta = self.meta_process(page, soup)
+            for key in meta.keys():
+                info[key] = meta[key]
+
+            body = soup.find("body")
+            if body:
+                try:
+                    time = soup.find("div", class_="flex flex-col gap-x-3 gap-y-1.5 flex-wrap sm:flex-row").find("div")
+                    info["time"] = dateparser.parse(time.text).isoformat()
+                except:
+                    info["time"] = ""
+                text_content = soup.find("div", class_="entry-contents pr-0 md:pr-8")
+                text_soup = BeautifulSoup(str(text_content), 'html.parser').find_all("p")
+                info["text"] = " ".join(list(map(lambda x: x.text, text_soup))).replace('\xa0', ' ')
+                info["tags"] = []
+                info["links"] = []
+                info["base_links"] = []
+
+                entities = []
+                raw_entities = []
+                for word in self.stanza_nlp_ru(info["text"]):
+                    p = self.morph.parse(word)[0]
+                    entities.append(p.normal_form)
+                    raw_entities.append(word)
+
+                info["entity"] = list(set(entities))
+                info["raw_entity"] = list(set(raw_entities))
             return info
 
         except:
