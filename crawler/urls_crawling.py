@@ -33,8 +33,11 @@ def urls_crawling(executable_path="/Users/egor.smirnov/Documents/parser/geckodri
     driver = webdriver.Firefox(executable_path=executable_path)
     wait = WebDriverWait(driver, 3600)
     hrefs = {}
-    for i in tqdm(range(1, pages_count + 1)):
-        d = page_process(driver, wait, i)
+    for i in range(1, PAGES + 1):
+        try:
+            d = page_process(driver, wait, i)
+        except:
+            d = {}
         for key in d:
             if key not in hrefs:
                 hrefs[key] = []
