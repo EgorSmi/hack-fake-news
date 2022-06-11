@@ -9,6 +9,9 @@ from abc import abstractmethod
 
 
 class PagesCrawler:
+    """
+    Class for urls crawling.
+    """
     def __init__(self, web_resource_name: str, output_name: str):
         self.web_resource_name = web_resource_name
         self.output_name = output_name
@@ -46,6 +49,9 @@ class PagesCrawler:
 
 
 class MosRuCrawler(PagesCrawler):
+    """
+    Mos.ru crawling util
+    """
     def __init__(
             self, web_resource_name: str = "https://www.mos.ru", output_name: str = "mos_ru_pages.json",
             urls_count: int = 68_500, urls_per_page: int = 10
@@ -95,6 +101,9 @@ class MosRuCrawler(PagesCrawler):
 
 
 class RiaNovostiCrawler(PagesCrawler):
+    """
+    Ria.ru crawling util. Crawling news from ria novosti
+    """
     def __init__(self, web_resource_name: str = "https://ria.ru/", output_name: str = "ria_ru_pages.json"):
         super().__init__(web_resource_name, output_name)
 
@@ -123,8 +132,8 @@ class RiaNovostiCrawler(PagesCrawler):
                 href = news.get_attribute("href")
                 if href.startswith("https://ria.ru/"):
                     hrefs.add(href)
-            #  scroll
             try:
+                #  scroll
                 next_page = self.driver.find_element(By.XPATH, "//*[@class='list-more']")
                 next_page.click()
             except:
