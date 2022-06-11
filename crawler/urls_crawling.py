@@ -29,7 +29,7 @@ def page_process(driver, wait, number):
     return hrefs
 
 
-def urls_crawling(executable_path="/Users/egor.smirnov/Documents/parser/geckodriver):
+def urls_crawling(executable_path="/Users/egor.smirnov/Documents/parser/geckodriver"):
     driver = webdriver.Firefox(executable_path=executable_path)
     wait = WebDriverWait(driver, 3600)
     hrefs = {}
@@ -49,7 +49,6 @@ def main():
 
     with open("page_urls.json", "wt") as f:
         json.dump(hrefs, f)
-
 
 
 if __name__ == "__main__":
