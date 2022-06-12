@@ -68,7 +68,7 @@ def main(index_path: str):
     Способствовали высоким результатам и технологии, которые помогают адаптировать жизнь горожан во время пандемии. Это проекты в сфере умного туризма, электронной коммерции и логистики, а также дистанционной работы и онлайн-образования.
     Эксперты агентства StartupBlink оценивали принятые в Москве меры с точки зрения эпидемиологических показателей и влияния на экономику."""
     result = estimate_news_paper(text, searcher, scorer, k_top_candidates=10, scoring_type='intersection')
-    print(result)
+    print(result[1])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pipeline")
