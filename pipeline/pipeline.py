@@ -69,7 +69,6 @@ def estimate_news_paper(text: str,
     doc_id_top = []
     for document in avg_min_score_per_document_sorted[:highlight_k_top]:
         doc_id_top.append(document)
-    print(doc_id_top)
     return res, doc_id_top, white_list_candidates
 
 
