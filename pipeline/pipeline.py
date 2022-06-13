@@ -77,6 +77,7 @@ def highlight(doc_id_top: list,
               indexdb: Database):
     info = dict()
 
+    ids = [data[0] for data in doc_id_top]
     for pair in doc_id_top:
         id_ = pair[0]
         score = pair[1]
@@ -85,7 +86,7 @@ def highlight(doc_id_top: list,
         info[id_]["score"] = score
         info[id_]["tonality"] = indexdb.get(id_)["tonality"]
     for doc_sentence in doc_sentences:
-        if doc_sentence["doc_id"] in doc_id_top:
+        if doc_sentence["doc_id"] in ids:
             orig_sentences = list(set(list(itertools.chain(*list(map(lambda x: x["src_sentences"],
                                                                      list(doc_sentence["entity"].values())))))))
             info[doc_sentence["doc_id"]]["sentences"] = orig_sentences
@@ -113,7 +114,14 @@ def setup(index_path: str):
 
 def main(index_path: str):
     db, searcher, scorer, semantic_searcher = setup(index_path)
-    text = """cобянин приехал в москву"""
+    text = """В мире Москва занимает третье место, уступая лишь Нью-Йорку и Сан-Франциско.
+Москва признана первой среди европейских городов в рейтинге инноваций, помогающих в формировании устойчивости коронавирусу. Она опередила Лондон и Барселону.
+Среди мировых мегаполисов российская столица занимает третью строчку — после Сан-Франциско и Нью-Йорка. Пятерку замыкают Бостон и Лондон. Рейтинг составило международное исследовательское агентство StartupBlink.
+Добиться высоких показателей Москве помогло почти 160 передовых решений, которые применяются для борьбы с распространением коронавируса.
+Среди них алгоритмы компьютерного зрения на основе искусственного интеллекта. Это методика уже помогла рентгенологам проанализировать более трех миллионов исследований.
+Еще одно инновационное решение — облачная платформа, которая объединяет пациентов, врачей, медицинские организации, страховые компании, фармакологические производства и сайты.
+Способствовали высоким результатам и технологии, которые помогают адаптировать жизнь горожан во время пандемии. Это проекты в сфере умного туризма, электронной коммерции и логистики, а также дистанционной работы и онлайн-образования.
+Эксперты агентства StartupBlink оценивали принятые в Москве меры с точки зрения эпидемиологических показателей и влияния на экономику."""
     result, doc_id_top, doc_sentences = estimate_news_paper(text, searcher, scorer, k_top_candidates=10, scoring_type='intersection',
                     semantic_searcher=semantic_searcher)
     print(result)
