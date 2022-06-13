@@ -1,4 +1,18 @@
 fastapi==0.70.1
 uvicorn==0.11.7
+torch
+transformers
+sentence-transformers==2.2.0
+psycopg2
+dostoevsky
+ner
+stanza
+dateparser
+datefinder
+timefhuman
+spacy
+pymorphy2
+pandas
+dill
 
 

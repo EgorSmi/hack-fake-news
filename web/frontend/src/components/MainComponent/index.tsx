@@ -1,12 +1,12 @@
 import CardContent from "@mui/material/CardContent";
 import Typography from "@mui/material/Typography";
-import {Box, Button, Card, LinearProgress, Step, StepLabel, Stepper, TextField} from "@mui/material";
+import {Alert, AlertTitle, Box, Button, Card, LinearProgress, Step, StepLabel, Stepper, TextField} from "@mui/material";
 import React, {useEffect, useState} from "react";
-import TextareaAutosize from '@mui/base/TextareaAutosize';
 import {CheckItem} from "../../types/checkItem";
 import {CheckResponse, FindItem} from "../../types/checkResponse";
 import {HighLighterComponent} from "../HighlighterComponent";
 import {FindListComponent} from "../FindListComponent";
+import {SentimentComponent} from "../SentimentComponent";
 
 
 export const MainComponent = (): JSX.Element => {
@@ -16,7 +16,8 @@ export const MainComponent = (): JSX.Element => {
     const [content, setContent] = useState('');
     const [checkItem, setCheckItem] = useState<CheckItem | undefined>(undefined);
     const [result, setResult] = useState<CheckResponse | undefined>(undefined);
-    const [activeItem, setActivaItem] = useState<FindItem | undefined>(undefined)
+    const [activeItem, setActiveItem] = useState<FindItem | undefined>(undefined)
+    const [error, setError] = useState<string>('')
     const steps = ['Статья', 'Проверка', 'Результат проверки'];
     const stepRender = [step1, step2, step3]
 
@@ -39,16 +40,21 @@ export const MainComponent = (): JSX.Element => {
                 setResult(data);
                 console.log(data);
             })
+            .catch(() => {
+                setError('Попробуйте еще раз.')
+            })
 
     }
 
     function back() {
         setActiveStep(0)
+        setActiveItem(undefined)
+        setError('');
     }
 
     function stepper() {
         return (
-            <Stepper activeStep={activeStep} sx={{marginTop: '10px', marginBottom: '10px', width: '70%'}}>
+            <Stepper activeStep={activeStep} sx={{marginTop: '10px', marginBottom: '10px', width: '100%'}}>
                 {steps.map((label, index) => {
                     const stepProps: { completed?: boolean } = {};
                     const labelProps: {
@@ -90,20 +96,35 @@ export const MainComponent = (): JSX.Element => {
     function step2() {
         return (
             <Box sx={{width: '100%', marginTop: '10px'}}>
-                <LinearProgress/>
+
+                {(error.length) ? (
+                    <Alert severity="error">
+                        <AlertTitle>Ошибка</AlertTitle>
+                        {error}
+                    </Alert>
+                ) : (<LinearProgress/>)}
             </Box>
         );
     }
 
+    function verdict(){
+        const res = result?.result ?? 0;
+        return ((res>=90)?'новость достоверная' :
+                        (res>=60)?'скорее всего не фейк' :
+                            (res>=40)?'скорее всего фейк' :
+                                        'фейк');
+    }
+
     function step3() {
+        const res = result?.result ?? 0;
         return (
             <>
 
-                <Typography variant="h6" color="text.secondary" sx={{textAlign: 'center'}} gutterBottom>
-                    Статья не является фейком на {result?.result ?? 0}%
+                <Typography variant="h6" color="text.secondary" sx={{textAlign: 'left'}} gutterBottom>
+                    Результат проверки <strong>{res}% ({verdict()})</strong>
                 </Typography>
-                <p>{checkItem?.title ?? ''}</p>
-                <Box sx={{fontSize:'initial', border:1,borderRadius:'5px',padding:'10px',minHeight:'40vh'}}>
+                <Typography variant="h6">{checkItem?.title ?? ''}</Typography>
+                <Box sx={{fontSize: 'initial', border: 1, borderRadius: '5px', padding: '10px', minHeight: '40vh'}}>
 
                     <HighLighterComponent
                         pattern={activeItem?.pattern ?? checkItem?.content ?? ''}
@@ -115,20 +136,25 @@ export const MainComponent = (): JSX.Element => {
                 <FindListComponent
                     items={result?.items ?? []}
                     onSelectItem={(x) => {
-                        setActivaItem(x)
+                        setActiveItem((x===activeItem)?undefined:x)
                     }}
-                     selectedItem={activeItem}
+                    selectedItem={activeItem}
+                    result={result}
                 ></FindListComponent>
 
+                {(result?.sentiment) ?
+                    (<SentimentComponent sentiment={result.sentiment}></SentimentComponent>)
+                    : (<></>)}
             </>
+
         );
     }
 
     function actions() {
         return (
             <div style={{marginTop: '10px', display: 'flex', justifyContent: 'space-between'}}>
-                <Button onClick={back}>Назад</Button>
-                <Button onClick={check}>Проверить</Button>
+                <Button onClick={back} disabled={activeStep === 0}>Назад</Button>
+                <Button onClick={check} disabled={activeStep !== 0}>Проверить</Button>
             </div>
         );
     }
@@ -141,7 +167,7 @@ export const MainComponent = (): JSX.Element => {
                     Сервис проверки фейковых новостей
                 </Typography>
                 {stepper()}
-                <div style={{width: '80vw',minHeight:'60vh'}}>
+                <div style={{width: '80vw', minHeight: '60vh'}}>
                     {
                         stepRender[activeStep]()
                     }
