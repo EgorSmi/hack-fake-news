@@ -63,15 +63,12 @@ class SentenceBertScorer:
                 }
         return dict(query_sentences_pairs)
 
-    def get_score_per_entity(self, query_sentences: List[str],
-                             src_sentences: List[str]) -> dict:
-        score_matrix = self.get_score_matrix(query_sentences, src_sentences).tolist()
-        query_sentences_pairs = defaultdict(dict)
-        for guery_idx in range(len(query_sentences)):
-            for src_idx in range(len(src_sentences)):
-                query_sentences_pairs[query_sentences[guery_idx]] \
-                    [src_sentences[src_idx]] = score_matrix[guery_idx][src_idx]
-        return dict(query_sentences_pairs)
+    def get_score_pairs_per_entity(self, query_sentences: List[str],
+                                   src_sentences: List[str]) -> dict:
+        score_matrix = 1 - self.get_score_matrix(query_sentences,
+                                                 src_sentences)
+        return score_matrix.max().item()
+
 
     def get_score_pairs(self, candidates):
         query_sentences_pairs = defaultdict(dict)
@@ -91,11 +88,8 @@ class SentenceBertScorer:
             for entity in candidate['entity']:
                 src_sentences = candidate['entity'][entity]['src_sentences']
                 query_sentences = candidate['entity'][entity]['query_sentences']
-                score_pairs = self.get_score_per_entity(query_sentences,
-                                                        src_sentences)
-                min_pair_score = max([1 - score_pairs[query_sentence][src_sentence]
-                                      for query_sentence in score_pairs
-                                      for src_sentence in score_pairs[query_sentence]])
+                min_pair_score = self.get_score_pairs_per_entity(query_sentences,
+                                                                 src_sentences)
                 entity_score = candidate['entity'][entity]['score']
                 candidate_score += min_pair_score * entity_score
                 accumulate_entity_score += entity_score

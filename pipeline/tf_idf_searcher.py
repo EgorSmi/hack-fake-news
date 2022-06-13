@@ -1,5 +1,5 @@
 from collections import Counter, defaultdict
-from typing import List
+from typing import List, Optional
 import numpy as np
 
 from index import InvertedIndex
@@ -10,7 +10,6 @@ class TfidfSearch:
     """
     A class for searching for the most relevant tf-idf documents
     """
-
     def __init__(self, index: InvertedIndex,
                  ner_algorithm,
                  lemmatizer=lemmatize_text):
@@ -24,8 +23,8 @@ class TfidfSearch:
 
     def calculate_bm25_score(self, document_entity_tf, entity_idf,
                              doc_len, avg_len, b=0.75, k=1.5):
-        return entity_idf * (document_entity_tf * (k + 1)) / \
-               (document_entity_tf + k * (1 - b + b * (doc_len) / avg_len))
+        return entity_idf * (document_entity_tf * (k + 1)) /\
+            (document_entity_tf + k * (1 - b + b * (doc_len) / avg_len))
 
     def calculate_document_rank(self, news_entity_frequency: Counter,
                                 document_entity_frequency: Counter,
@@ -36,16 +35,16 @@ class TfidfSearch:
         entity_score = dict()
         for entity in news_entity_frequency:
             if entity not in self.index.index or \
-                    entity not in document_entity_frequency:
-                continue
-            document_entity_tf = document_entity_frequency[entity] / \
-                                 document_total_frequency
+                entity not in document_entity_frequency:
+                    continue
+            document_entity_tf = document_entity_frequency[entity] /\
+                document_total_frequency
             entity_idf = np.log((len(self.index.db) - self.index.document_frequency[entity]) /
                                 self.index.document_frequency[entity])
             bm_25 = self.calculate_bm25_score(document_entity_tf,
-                                              entity_idf,
-                                              doc_len,
-                                              self.index.avg_document_len)
+                                               entity_idf,
+                                               doc_len,
+                                               self.index.avg_document_len)
             score_per_entity = bm_25 * news_total_entity_frequency
             entity_score[entity] = score_per_entity
             score += score_per_entity
@@ -59,14 +58,15 @@ class TfidfSearch:
             if entity not in self.index.index:
                 continue
             entity_idf = np.log((len(self.index.db) - self.index.document_frequency[entity]) /
-                                self.index.document_frequency[entity])
+                                  self.index.document_frequency[entity])
             score_per_entity = entity_idf
             entity_score[entity] = score_per_entity
             score += entity_idf
         return score, entity_score
 
     def get_document_ranking_by_paper(self, paper_text: str,
-                                      scoring_type: str = 'intersection') -> list:
+                                      scoring_type: str='intersection',
+                                      pre_candidates: Optional[dict]=None) -> list:
         raw_news_entities = self.ner_algorithm(paper_text)
         paper_entity_context = defaultdict(set)
         news_entity_frequency = defaultdict(int)
@@ -74,7 +74,7 @@ class TfidfSearch:
             normalized_entity = self.lemmatizer(raw_entity)
             for entity_idx in find_all_entities(paper_text, raw_entity):
                 entity_context = extract_entity_sentence(paper_text,
-                                                         entity_idx)
+                                                          entity_idx)
                 paper_entity_context[normalized_entity].add(entity_context)
                 news_entity_frequency[normalized_entity] += 1
         unique_news_entities = set(paper_entity_context.keys())
@@ -82,14 +82,16 @@ class TfidfSearch:
         index_response = self.index.lookup_query(unique_news_entities)
         index_candidates = {appearance.docId
                             for entity_response in index_response.values()
-                            for appearance in entity_response}
+                            for appearance in entity_response
+                            if (pre_candidates is None or
+                                appearance.docId in pre_candidates)}
         if scoring_type == 'bm_25':
-            index_candidates_rank = \
+            index_candidates_rank =\
                 [(doc_id,
                   *self.calculate_document_rank(
-                      news_entity_frequency,
-                      self.index.db.get(doc_id)['entity_frequency'],
-                      self.index.db.get(doc_id)['text_len']
+                    news_entity_frequency,
+                    self.index.db.get(doc_id)['entity_frequency'],
+                    self.index.db.get(doc_id)['text_len']
                   )) for doc_id in index_candidates]
         elif scoring_type == 'intersection':
             index_candidates_rank = [
@@ -108,9 +110,9 @@ class TfidfSearch:
             for entity in candidate[2]:
                 entity_info = {}
                 entity_info['score'] = candidate[2][entity]
-                entity_info['src_sentences'] = list(self.index.db. \
-                                                    get(candidate[0])['entity_context'][entity])
-                entity_info['query_sentences'] = \
+                entity_info['src_sentences'] = list(self.index.db.\
+                    get(candidate[0])['entity_context'][entity])
+                entity_info['query_sentences'] =\
                     list(paper_entity_context[entity])
                 if 'entity' not in candidate_info:
                     candidate_info['entity'] = {}
@@ -121,20 +123,14 @@ class TfidfSearch:
         return formated_candidates
 
     def search(self, paper_text: str,
-               scoring_type: str = 'intersection',
-               k_top: int = 10,
-               need_correct: bool = False,
-               entity_per_candidate: int = 20):
-        document_ranking_by_paper, paper_entity_context = \
-            self.get_document_ranking_by_paper(paper_text, scoring_type)
-        document_ranking_by_paper_top = \
+               scoring_type: str='intersection',
+               k_top: int=10,
+               pre_candidates: Optional[dict]=None):
+        document_ranking_by_paper, paper_entity_context =\
+            self.get_document_ranking_by_paper(paper_text,
+                                               scoring_type,
+                                               pre_candidates)
+        document_ranking_by_paper_top =\
             sorted(document_ranking_by_paper, key=lambda pair: pair[1] * -1)[:k_top]
-        if need_correct:
-            cnt_entity = 0
-            for doc in document_ranking_by_paper_top:
-                cnt_entity += len(doc[2].keys())
-
-            k_top_edited = max(k_top - cnt_entity // entity_per_candidate, 1)
-            document_ranking_by_paper_top = document_ranking_by_paper_top[:k_top_edited]
         return self.prepare_candidates(document_ranking_by_paper_top,
                                        paper_entity_context)

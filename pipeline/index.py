@@ -6,7 +6,7 @@ import json
 import numpy as np
 import pandas as pd
 import pymorphy2
-
+import torch
 from tqdm import tqdm
 import re
 import dill as pickle
@@ -108,6 +108,9 @@ class InvertedIndex:
                 entity_context = extract_entity_sentence(document['text'],
                                                           entity_idx)
                 document['entity_context'][normalized_entity].add(entity_context)
+        document['embedding'] =\
+            torch.tensor(document['rubert-base-cased-sentence_embedding'])
+        document['entity_context'] = dict(document['entity_context'])
         document['text_len'] = len(document['text'].split())
         document['entity_frequency'] =\
             Counter({key: appearance.frequency for
@@ -140,6 +143,11 @@ class InvertedIndex:
         self.avg_document_len = 0
         for doc_id in self.db.keys():
             self.avg_document_len += self.db.get(doc_id)['text_len'] / len(self.db)
+
+    def get_corpus_embeddings(self):
+        doc_ids = list(self.db.keys())
+        return doc_ids, torch.stack([self.db.get(doc_id)['embedding']
+                                     for doc_id in doc_ids])
 
 
 def create_index(document_collection: List[dict],
